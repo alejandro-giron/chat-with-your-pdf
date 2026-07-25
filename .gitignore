@@ -1,4 +1,36 @@
 # .gitignore
+
+# Virtual environments
 venv/
 .venv/
 env/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environment and secrets
+.env
+.env.*
+*.local
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Local data and runtime artifacts
+data/
+*.log
