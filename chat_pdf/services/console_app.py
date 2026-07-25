@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+import sys
 from typing import Callable, Optional
 
 from chat_pdf.domain.models import PdfDocument
+
+
+def _default_input_func(prompt: str) -> str:
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    line = sys.stdin.readline()
+    if line == "":
+        return ""
+    return line.rstrip("\n")
 
 
 class ConsoleApp:
@@ -17,7 +27,7 @@ class ConsoleApp:
     ) -> None:
         self.ingestion_service = ingestion_service
         self.query_service = query_service
-        self.input_func = input_func or input
+        self.input_func = input_func or _default_input_func
         self.output_func = output_func or print
 
     def run(self) -> None:

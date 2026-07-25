@@ -1,7 +1,8 @@
+import io
 from pathlib import Path
 from typing import List
 
-from chat_pdf.services.console_app import ConsoleApp
+from chat_pdf.services.console_app import ConsoleApp, _default_input_func
 
 
 class FakeIngestionService:
@@ -40,6 +41,17 @@ class FakeOutput:
 class FailingIngestionService:
     def ingest(self, document) -> None:
         raise RuntimeError("Could not process PDF")
+
+
+def test_default_input_func_reads_from_stdin(monkeypatch) -> None:
+    fake_stdin = io.StringIO("sample.pdf\n")
+    fake_stdout = io.StringIO()
+    monkeypatch.setattr("sys.stdin", fake_stdin)
+    monkeypatch.setattr("sys.stdout", fake_stdout)
+
+    value = _default_input_func("Enter path: ")
+
+    assert value == "sample.pdf"
 
 
 def test_console_app_runs_a_query_loop(tmp_path: Path) -> None:

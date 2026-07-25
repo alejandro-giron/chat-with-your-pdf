@@ -5,12 +5,57 @@ from typing import Any, Dict, List
 import chromadb
 
 
+def _normalize_embedding_sequence(value: Any) -> List[List[float]]:
+    if value is None:
+        return []
+
+    if isinstance(value, (list, tuple)):
+        return [list(item) if isinstance(item, (list, tuple)) else [float(item)] for item in value]
+
+    if hasattr(value, "tolist"):
+        try:
+            value = value.tolist()
+        except Exception:
+            return []
+
+    if isinstance(value, (list, tuple)):
+        return [list(item) if isinstance(item, (list, tuple)) else [float(item)] for item in value]
+
+    return []
+
+
 class ChromaVectorStore:
     """Concrete vector store implementation backed by ChromaDB."""
 
     def __init__(self, collection_name: str = "pdf_documents", persist_directory: str | None = None) -> None:
-        client = chromadb.PersistentClient(path=persist_directory) if persist_directory else chromadb.PersistentClient()
-        self.collection = client.get_or_create_collection(name=collection_name)
+        self.collection_name = collection_name
+        self.persist_directory = persist_directory
+        self.client = chromadb.PersistentClient(path=persist_directory) if persist_directory else chromadb.PersistentClient()
+        self.collection = self.client.get_or_create_collection(name=collection_name)
+
+    def _reset_collection(self) -> None:
+        try:
+            self.client.delete_collection(self.collection_name)
+        except Exception:
+            pass
+        self.collection = self.client.get_or_create_collection(name=self.collection_name)
+
+    def _needs_collection_reset(self, embeddings: List[List[float]]) -> bool:
+        if not embeddings:
+            return False
+
+        try:
+            existing = self.collection.get(include=["embeddings"])
+        except Exception:
+            return False
+
+        existing_embeddings = _normalize_embedding_sequence(existing.get("embeddings", []))
+        if not existing_embeddings:
+            return False
+
+        current_dimension = len(existing_embeddings[0])
+        incoming_dimension = len(embeddings[0])
+        return current_dimension != incoming_dimension
 
     def add_documents(self, documents: List[Dict[str, Any]]) -> None:
         if not documents:
@@ -20,11 +65,25 @@ class ChromaVectorStore:
         embeddings = [doc.get("embedding", []) for doc in documents]
         ids = [str(index) for index in range(len(documents))]
 
-        self.collection.add(
-            documents=texts,
-            embeddings=embeddings,
-            ids=ids,
-        )
+        if self._needs_collection_reset(embeddings):
+            self._reset_collection()
+
+        try:
+            self.collection.add(
+                documents=texts,
+                embeddings=embeddings,
+                ids=ids,
+            )
+        except Exception as exc:
+            if "dimension" in str(exc).lower():
+                self._reset_collection()
+                self.collection.add(
+                    documents=texts,
+                    embeddings=embeddings,
+                    ids=ids,
+                )
+                return
+            raise
 
     def similarity_search(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         if not query.strip():

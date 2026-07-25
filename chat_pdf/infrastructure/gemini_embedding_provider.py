@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Any
+from typing import Any, List
 
 
 class GeminiEmbeddingProvider:
@@ -19,5 +19,33 @@ class GeminiEmbeddingProvider:
             contents=texts,
         )
 
-        embeddings = response.get("embeddings", [])
-        return [embedding.get("values", []) for embedding in embeddings]
+        if hasattr(response, "embeddings"):
+            embeddings = response.embeddings
+        elif isinstance(response, dict):
+            embeddings = response.get("embeddings", [])
+        else:
+            embeddings = []
+
+        if hasattr(embeddings, "__iter__") and not isinstance(embeddings, (str, bytes)):
+            normalized_embeddings: List[List[float]] = []
+            for embedding in embeddings:
+                if isinstance(embedding, dict):
+                    values = embedding.get("values", embedding.get("embedding", []))
+                else:
+                    values = getattr(embedding, "values", None)
+                    if callable(values):
+                        values = None
+
+                if values is None:
+                    values = embedding
+
+                if isinstance(values, (list, tuple)):
+                    normalized_embeddings.append(list(values))
+                elif hasattr(values, "__iter__") and not isinstance(values, (str, bytes)):
+                    normalized_embeddings.append(list(values))
+                else:
+                    normalized_embeddings.append([])
+
+            return normalized_embeddings
+
+        return []

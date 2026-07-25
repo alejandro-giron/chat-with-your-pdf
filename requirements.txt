@@ -1,0 +1,5 @@
+chromadb
+pdfplumber
+google-genai
+pytest
+pytest-mock
