@@ -10,6 +10,7 @@ class FakeCollection:
         self.existing_embeddings = existing_embeddings or []
         self.added_documents = []
         self.raise_on_mismatch = raise_on_mismatch
+        self.last_query_embeddings = None
 
     def count(self) -> int:
         return len(self.existing_embeddings)
@@ -22,6 +23,12 @@ class FakeCollection:
             raise ValueError("Collection expecting embedding with dimension of 3072, got 384")
         self.existing_embeddings = [list(embedding) for embedding in embeddings]
         self.added_documents.append((documents, embeddings, ids))
+
+    def query(self, query_texts=None, query_embeddings=None, n_results=None):
+        self.last_query_embeddings = query_embeddings
+        if self.raise_on_mismatch:
+            raise ValueError("Collection expecting embedding with dimension of 3072, got 384")
+        return {"documents": [["doc"]], "embeddings": [[[0.1] * 384]]}
 
 
 class FakeClient:
@@ -83,3 +90,22 @@ def test_chroma_vector_store_handles_numpy_embeddings_from_collection(monkeypatc
     store.add_documents([{"text": "hello", "embedding": [0.1] * 384}])
 
     assert client.deleted == ["pdf_documents"]
+
+
+def test_chroma_vector_store_uses_embedding_service_for_queries(monkeypatch) -> None:
+    client = FakeClient()
+    existing_collection = FakeCollection(existing_embeddings=[[0.0] * 3072])
+    client.collections["pdf_documents"] = existing_collection
+
+    monkeypatch.setattr(chroma_module.chromadb, "PersistentClient", lambda path=None: client)
+
+    class FakeEmbeddingService:
+        def embed(self, texts):
+            assert texts == ["hello"]
+            return [[0.1] * 3072]
+
+    store = chroma_module.ChromaVectorStore(collection_name="pdf_documents", embedding_service=FakeEmbeddingService())
+    results = store.similarity_search("hello", top_k=1)
+
+    assert existing_collection.last_query_embeddings == [[0.1] * 3072]
+    assert results == [{"text": "doc", "embedding": [0.1] * 384}]

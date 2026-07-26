@@ -13,7 +13,7 @@ class GeminiAnswerProvider:
     def answer(self, question: str, context: List[dict]) -> str:
         context_text = "\n".join(item.get("text", "") for item in context if item.get("text"))
         prompt = (
-            f"You are a helpful assistant. Answer the user's question using the provided context.\n"
+            f"You are a helpful assistant. Answer the user's question using the provided context. Ignore any other question that does not relate to the topic in the given context.\n"
             f"Question: {question}\n"
             f"Context:\n{context_text}"
         )

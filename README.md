@@ -9,10 +9,17 @@ A simple console app that lets you ask questions about a local PDF document.
    ```bash
    pip install -r requirements.txt
    ```
-3. Run the app:
+3. Configure your Gemini API key as an environment variable:
+   ```bash
+   export GEMINI_API_KEY="your-api-key-here"
+   ```
+   The app uses this key to generate embeddings and answers.
+4. Run the app:
    ```bash
    python app.py
    ```
+
+A sample PDF is included in the repository for local testing, so you can use it immediately after setup.
 
 ## Usage
 

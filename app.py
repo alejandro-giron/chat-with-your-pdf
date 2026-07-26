@@ -22,7 +22,7 @@ def build_app() -> ConsoleApp:
     chunker = TextChunker(chunk_size=500, overlap=50)
     embedding_provider = GeminiEmbeddingProvider(client=client)
     embedding_service = EmbeddingService(embedding_provider)
-    vector_store = ChromaVectorStore(persist_directory="./data/chroma_db")
+    vector_store = ChromaVectorStore(persist_directory="./data/chroma_db", embedding_service=embedding_service)
     vector_store_service = VectorStoreService(vector_store)
     answer_provider = GeminiAnswerProvider(client=client)
     answer_generator = AnswerGeneratorService(answer_provider)
